@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Scheduling System</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #10b981;
+            --secondary-hover: #059669;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --text-muted: #475569;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .card {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1rem;
+        }
+        label { font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        input {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        
+        .btn-download {
+            background-color: var(--secondary);
+            margin-top: 0;
+            width: auto;
+        }
+        .btn-download:hover { background-color: var(--secondary-hover); }
+
+        .flex-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { background-color: #f1f5f9; }
+        
+        .eta-container {
+            background-color: #f0fdf4;
+            color: #166534;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #bbf7d0;
+        }
+        .eta-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .eta-breakdown {
+            font-size: 0.9rem;
+            color: #14532d;
+            border-top: 1px solid #bbf7d0;
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        details.advanced {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+        details.advanced summary {
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--primary);
+            user-select: none;
+        }
+        .explanation-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Team Scheduling System</h1>
+
+    <div class="card">
+        <h2>Configuration Parameters</h2>
+        <div class="grid">
+            <div class="form-group">
+                <label for="numTeams">Number of Teams (X)</label>
+                <input type="number" id="numTeams" value="8" min="2">
+            </div>
+            <div class="form-group">
+                <label for="gamesPerTeam">Games Per Team</label>
+                <input type="number" id="gamesPerTeam" value="3" min="1">
+            </div>
+            <div class="form-group">
+                <label for="numTables">Number of Tables (T)</label>
+                <input type="number" id="numTables" value="2" min="1">
+            </div>
+        </div>
+
+        <details class="advanced">
+            <summary>Advanced Algorithm Settings</summary>
+            <div style="margin-top: 1rem;">
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="kValue">Ranking Tolerance (k)</label>
+                        <input type="number" id="kValue" value="0.7" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="penaltyValue">Consecutive Penalty</label>
+                        <input type="number" id="penaltyValue" value="2.0" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="explanation-text">
+                    <strong>Ranking Tolerance (k):</strong> This controls how strictly the system tries to match teams of similar skill levels. 
+                    A lower number means stricter matching. A higher number allows for wider ranking gaps.
+                </div>
+                
+                <div class="explanation-text">
+                    <strong>Consecutive Penalty:</strong> This controls the penalty applied when a team is forced to play back-to-back games without resting. 
+                    A higher value strongly discourages scheduling consecutive matches for the same team.
+                </div>
+            </div>
+        </details>
+
+        <button onclick="runScheduler()">Generate Schedule</button>
+    </div>
+
+    <div id="results" style="display: none;">
+        <div id="etaContainer"></div>
+        
+        <div class="card">
+            <div class="flex-header">
+                <h2>Schedule Details</h2>
+                <button class="btn-download" onclick="downloadCSV()">Download as CSV</button>
+            </div>
+            <div id="scheduleTable"></div>
+        </div>
+    </div>
+
+    <script>
+        let generatedScheduleData = [];
+
+        function weightedRandom(items, weights) {
+            let total = weights.reduce((a, b) => a + b, 0);
+            let rand = Math.random() * total;
+            for (let i = 0; i < items.length; i++) {
+                rand -= weights[i];
+                if (rand <= 0) return items[i];
+            }
+            return items[items.length - 1];
+        }
+
+        function runScheduler() {
+            const numTeams = parseInt(document.getElementById('numTeams').value);
+            const gamesPerTeam = parseInt(document.getElementById('gamesPerTeam').value);
+            const numTables = parseInt(document.getElementById('numTables').value);
+            const kValue = parseFloat(document.getElementById('kValue').value);
+            const penaltyValue = parseFloat(document.getElementById('penaltyValue').value);
+
+            if (numTeams < 2 || numTables * 2 > numTeams) {
+                alert("Invalid configuration. Ensure you have at least 2 teams and enough teams for the tables.");
+                return;
+            }
+
+            const teams = Array.from({length: numTeams}, (_, i) => i + 1);
+            const totalMatchesNeeded = Math.floor((numTeams * gamesPerTeam) / 2);
+            const maxRounds = Math.ceil(totalMatchesNeeded / numTables) * 2; 
+            
+            let teamMatchCounts = {};
+            let pairMatchCounts = {};
+            let lastPlayed = {};
+            teams.forEach(t => { teamMatchCounts[t] = 0; lastPlayed[t] = []; });
+
+            const schedule = [];
+
+            function getPairKey(t1, t2) { return Math.min(t1, t2) + "-" + Math.max(t1, t2); }
+
+            for (let gameRound = 1; gameRound <= maxRounds; gameRound++) {
+                let roundMatches = [];
+                let availableTeams = new Set(teams.filter(t => teamMatchCounts[t] < gamesPerTeam));
+
+                if (availableTeams.size === 0) break;
+
+                for (let table = 1; table <= numTables; table++) {
+                    if (availableTeams.size < 2) break;
+
+                    let feasiblePairs = [];
+                    let maxDiff = 1;
+                    let selectedPair = null;
+
+                    while (maxDiff <= 5 && !selectedPair) { 
+                        let tempPairs = [];
+                        let availableArray = Array.from(availableTeams);
+
+                        for (let i = 0; i < availableArray.length; i++) {
+                            for (let j = i + 1; j < availableArray.length; j++) {
+                                let t1 = availableArray[i], t2 = availableArray[j];
+                                if (Math.abs(t1 - t2) <= maxDiff) {
+                                    tempPairs.push([t1, t2]);
+                                }
+                            }
+                        }
+
+                        if (tempPairs.length > 0) {
+                            let weights = tempPairs.map(pair => {
+                                let t1 = pair[0], t2 = pair[1];
+                                let rankDiff = Math.abs(t1 - t2);
+                                let baseProb = Math.exp(-rankDiff / kValue);
+                                
+                                let pairKey = getPairKey(t1, t2);
+                                let pairHistory = pairMatchCounts[pairKey] || 0;
+                                let pairPenalty = Math.exp(-pairHistory);
+
+                                let consecPenalty = 1.0;
+                                let lp1 = lastPlayed[t1];
+                                let lp2 = lastPlayed[t2];
+                                if (lp1.length && gameRound - lp1[lp1.length - 1] <= 1) consecPenalty /= penaltyValue;
+                                if (lp2.length && gameRound - lp2[lp2.length - 1] <= 1) consecPenalty /= penaltyValue;
+
+                                return baseProb * pairPenalty * consecPenalty;
+                            });
+
+                            selectedPair = weightedRandom(tempPairs, weights);
+                        }
+                        maxDiff++;
+                    }
+
+                    if (selectedPair) {
+                        let [t1, t2] = selectedPair;
+                        roundMatches.push([t1, t2]);
+                        availableTeams.delete(t1);
+                        availableTeams.delete(t2);
+
+                        teamMatchCounts[t1]++;
+                        teamMatchCounts[t2]++;
+                        lastPlayed[t1].push(gameRound);
+                        lastPlayed[t2].push(gameRound);
+                        
+                        let pairKey = getPairKey(t1, t2);
+                        pairMatchCounts[pairKey] = (pairMatchCounts[pairKey] || 0) + 1;
+                    }
+                }
+                
+                if (roundMatches.length > 0) {
+                    schedule.push(roundMatches);
+                }
+
+                let allDone = teams.every(t => teamMatchCounts[t] >= gamesPerTeam);
+                if (allDone) break;
+            }
+
+            generatedScheduleData = schedule;
+            renderResults(schedule);
+        }
+
+        function renderResults(schedule) {
+            document.getElementById('results').style.display = 'block';
+            
+            const totalRounds = schedule.length;
+            
+            // Precise Time Metrics
+            const gameplayMinsPerRound = 3 * 2; // 3 matches * 2 minutes = 6 minutes
+            const scoringAndResetMinsPerRound = 2; // 2 minutes to score/reset
+            const baseMinsPerRound = gameplayMinsPerRound + scoringAndResetMinsPerRound; // 8 minutes total per round
+            
+            const totalBaseRoundMinutes = totalRounds * baseMinsPerRound;
+            const extraTimeFixed = 5;
+            const meetingsAndHiccupsFixed = 5;
+            
+            // Calculate random 30-second delays across a few rounds (approx 30% chance per round)
+            let randomDelaysMinutes = 0;
+            let delayedRoundsCount = 0;
+            for (let i = 0; i < totalRounds; i++) {
+                if (Math.random() < 0.3) { 
+                    randomDelaysMinutes += 0.5; // 30 seconds expressed as 0.5 minutes
+                    delayedRoundsCount++;
+                }
+            }
+            
+            const exactTotalMinutes = totalBaseRoundMinutes + extraTimeFixed + meetingsAndHiccupsFixed + randomDelaysMinutes;
+            const etaHours = Math.floor(exactTotalMinutes / 60);
+            const remainingMins = Math.round(exactTotalMinutes % 60);
+            
+            let timeDisplayString = etaHours > 0 
+                ? `${etaHours} hour(s) and ${remainingMins} minute(s)` 
+                : `${remainingMins} minute(s)`;
+
+            document.getElementById('etaContainer').innerHTML = `
+                <div class="eta-container">
+                    <div class="eta-title">Accurate Tournament Estimate: ${timeDisplayString}</div>
+                    <div class="eta-breakdown">
+                        <strong>Live Calculation Breakdown:</strong><br>
+                        • Total Rounds Generated: ${totalRounds}<br>
+                        • Total Game Playtime: ${totalRounds * gameplayMinsPerRound} minutes (${totalRounds} rounds × 3 matches × 2 mins)<br>
+                        • Total Scoring and Reset Time: ${totalRounds * scoringAndResetMinsPerRound} minutes (${totalRounds} rounds × 2 mins)<br>
+                        • Global Extra Time Allocation: +${extraTimeFixed} minutes<br>
+                        • Small Meetings & Hiccups Buffer: +${meetingsAndHiccupsFixed} minutes<br>
+                        • Random Delays Applied: +${randomDelaysMinutes} minutes (${delayedRoundsCount} rounds caught a 30-second delay)
+                    </div>
+                </div>
+            `;
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>Round</th>
+                        <th>Table</th>
+                        <th>Team 1</th>
+                        <th>Team 2</th>
+                        <th>Rank Diff</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            schedule.forEach((round, roundIndex) => {
+                round.forEach((match, tableIndex) => {
+                    let rankDiff = Math.abs(match[0] - match[1]);
+                    html += `
+                        <tr>
+                            <td><strong>${roundIndex + 1}</strong></td>
+                            <td>Table ${tableIndex + 1}</td>
+                            <td>Team ${match[0]}</td>
+                            <td>Team ${match[1]}</td>
+                            <td>${rankDiff}</td>
+                        </tr>
+                    `;
+                });
+            });
+
+            html += `</tbody></table>`;
+            document.getElementById('scheduleTable').innerHTML = html;
+        }
+
+        function downloadCSV() {
+            if (generatedScheduleData.length === 0) {
+                alert("No schedule available to download. Please generate one first.");
+                return;
+            }
+
+            let csvContent = "Round,Table,Team 1,Team 2,Rank Difference\n";
+
+            generatedScheduleData.forEach((round, roundIndex) => {
+                round.forEach((match, tableIndex) => {
+                    let rankDiff = Math.abs(match[0] - match[1]);
+                    let row = [
+                        roundIndex + 1,
+                        tableIndex + 1,
+                        "Team " + match[0],
+                        "Team " + match[1],
+                        rankDiff
+                    ];
+                    csvContent += row.join(",") + "\n";
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            
+            const date = new Date();
+            const timestamp = date.toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            link.setAttribute("download", `team_schedule_${timestamp}.csv`);
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
