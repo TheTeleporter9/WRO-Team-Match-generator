@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Scheduling System</title>
+    <title>Tournament Scheduler and Management System</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -15,6 +15,7 @@
             --text: #0f172a;
             --text-muted: #475569;
             --border: #e2e8f0;
+            --active-tab: #eff6ff;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -22,10 +23,49 @@
             color: var(--text);
             line-height: 1.5;
             padding: 2rem;
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
         }
-        h1, h2, h3 { color: var(--primary); }
+        h1, h2, h3, h4 { color: var(--primary); }
+        
+        /* Tabs Styling */
+        .tabs-nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-radius: 4px;
+            width: auto;
+            margin-top: 0;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            background-color: #f1f5f9;
+            color: var(--text);
+        }
+        .tab-btn.active {
+            background-color: var(--active-tab);
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
         .card {
             background: var(--surface);
             padding: 2rem;
@@ -35,20 +75,31 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
         }
         .form-group {
             display: flex;
             flex-direction: column;
             margin-bottom: 1rem;
         }
+        .form-group-checkbox {
+            flex-direction: row;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+        .form-group-checkbox input {
+            width: auto;
+            cursor: pointer;
+        }
         label { font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem; }
-        input {
+        input, select {
             padding: 0.5rem;
             border: 1px solid var(--border);
             border-radius: 4px;
             font-size: 1rem;
+            background-color: var(--surface);
         }
         button {
             background-color: var(--primary);
@@ -130,72 +181,183 @@
             margin-top: 0.25rem;
             margin-bottom: 1rem;
         }
+        
+        /* Doc Styles */
+        .doc-section {
+            margin-bottom: 2rem;
+        }
+        .doc-section ul {
+            padding-left: 1.5rem;
+        }
+        .doc-section li {
+            margin-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Team Scheduling System</h1>
+    <h1>Tournament Scheduling System</h1>
 
-    <div class="card">
-        <h2>Configuration Parameters</h2>
-        <div class="grid">
-            <div class="form-group">
-                <label for="numTeams">Number of Teams (X)</label>
-                <input type="number" id="numTeams" value="8" min="2">
-            </div>
-            <div class="form-group">
-                <label for="gamesPerTeam">Games Per Team</label>
-                <input type="number" id="gamesPerTeam" value="3" min="1">
-            </div>
-            <div class="form-group">
-                <label for="numTables">Number of Tables (T)</label>
-                <input type="number" id="numTables" value="2" min="1">
-            </div>
-        </div>
-
-        <details class="advanced">
-            <summary>Advanced Algorithm Settings</summary>
-            <div style="margin-top: 1rem;">
-                <div class="grid">
-                    <div class="form-group">
-                        <label for="kValue">Ranking Tolerance (k)</label>
-                        <input type="number" id="kValue" value="0.7" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="penaltyValue">Consecutive Penalty</label>
-                        <input type="number" id="penaltyValue" value="2.0" step="0.1">
-                    </div>
-                </div>
-                
-                <div class="explanation-text">
-                    <strong>Ranking Tolerance (k):</strong> This controls how strictly the system tries to match teams of similar skill levels. 
-                    A lower number means stricter matching. A higher number allows for wider ranking gaps.
-                </div>
-                
-                <div class="explanation-text">
-                    <strong>Consecutive Penalty:</strong> This controls the penalty applied when a team is forced to play back-to-back games without resting. 
-                    A higher value strongly discourages scheduling consecutive matches for the same team.
-                </div>
-            </div>
-        </details>
-
-        <button onclick="runScheduler()">Generate Schedule</button>
+    <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('schedulerTab')">Scheduler Dashboard</button>
+        <button class="tab-btn" onclick="switchTab('docsTab')">Tutorial & Documentation</button>
     </div>
 
-    <div id="results" style="display: none;">
-        <div id="etaContainer"></div>
-        
+    <div id="schedulerTab" class="tab-content active">
         <div class="card">
-            <div class="flex-header">
-                <h2>Schedule Details</h2>
-                <button class="btn-download" onclick="downloadCSV()">Download as CSV</button>
+            <h2>Configuration Parameters</h2>
+            <div class="grid">
+                <div class="form-group">
+                    <label for="numTeams">Number of Teams (X)</label>
+                    <input type="number" id="numTeams" value="8" min="2">
+                </div>
+                <div class="form-group">
+                    <label for="gamesPerTeam">Games Per Team</label>
+                    <input type="number" id="gamesPerTeam" value="7" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="numTables">Number of Tables (T)</label>
+                    <input type="number" id="numTables" value="4" min="1">
+                </div>
+                <div class="form-group form-group-checkbox">
+                    <input type="checkbox" id="strictRoundRobin" checked>
+                    <label for="strictRoundRobin" style="margin-bottom: 0;">Strict Round Robin Mode</label>
+                </div>
             </div>
-            <div id="scheduleTable"></div>
+
+            <details class="advanced">
+                <summary>Advanced Algorithm & Time Settings</summary>
+                <div style="margin-top: 1rem;">
+                    <h3>Algorithm Constraints</h3>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="kValue">Ranking Tolerance (k)</label>
+                            <input type="number" id="kValue" value="0.7" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="penaltyValue">Consecutive Penalty</label>
+                            <input type="number" id="penaltyValue" value="2.0" step="0.1">
+                        </div>
+                    </div>
+                    <div class="explanation-text">
+                        <strong>Ranking Tolerance (k):</strong> Controls how strictly the system matches teams of similar skill levels. Lower means stricter matching (only nearby ranks play). Higher allows wider ranking gaps.
+                    </div>
+                    <div class="explanation-text">
+                        <strong>Consecutive Penalty:</strong> Multiplier penalty applied when a team is forced to play back-to-back games without a round of rest. Higher strongly discourages consecutive matches.
+                    </div>
+                    <div class="explanation-text">
+                        <strong>Strict Round Robin Mode (Above):</strong> Fixes opponent starvation. When checked, the generator blocks any team rematch until they have played every other available team.
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+                    <h3>Custom Time & Delay Settings</h3>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="matchesPerGame">Matches Per Game</label>
+                            <input type="number" id="matchesPerGame" value="3" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="matchDuration">Match Duration (Minutes)</label>
+                            <input type="number" id="matchDuration" value="2" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="resetTime">Scoring & Reset Time (Minutes)</label>
+                            <input type="number" id="resetTime" value="2" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="fixedExtra">Global Extra Time (Minutes)</label>
+                            <input type="number" id="fixedExtra" value="5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="hiccupTime">Meetings & Hiccups Buffer (Minutes)</label>
+                            <input type="number" id="hiccupTime" value="5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="delayChance">Random Delay Chance per Round (%)</label>
+                            <input type="number" id="delayChance" value="30" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <button onclick="runScheduler()">Generate Schedule</button>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div id="etaContainer"></div>
+            
+            <div class="card">
+                <div class="flex-header">
+                    <h2>Schedule Details</h2>
+                    <button class="btn-download" onclick="downloadCSV()">Download as CSV</button>
+                </div>
+                <div id="scheduleTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="docsTab" class="tab-content">
+        <div class="card">
+            <h2>System Documentation & User Guide</h2>
+            
+            <div class="doc-section">
+                <h3>Introduction</h3>
+                <p>This scheduling application uses a mathematically weighted constraint-satisfaction algorithm to generate balanced game schedules for multi-table sports or gaming events. It optimizes for skill matching, rest cycles, and uniquely balances full round-robin coverage.</p>
+            </div>
+
+            <div class="doc-section">
+                <h3>Quick Start Instructions</h3>
+                <ol>
+                    <li>Enter the total number of participating teams in the <strong>Number of Teams (X)</strong> field.</li>
+                    <li>Define how many games each team should play during the event. For a complete standard single round robin, set this value to exactly <em>Number of Teams minus 1</em>.</li>
+                    <li>Enter how many physical playing fields, courts, or tables are open in the <strong>Number of Tables (T)</strong> field.</li>
+                    <li>Click <strong>Generate Schedule</strong> to evaluate metrics, construct rounds, and view precise timing parameters.</li>
+                    <li>Use the <strong>Download as CSV</strong> button to save the layout directly into Microsoft Excel or Google Sheets.</li>
+                </ol>
+            </div>
+
+            <div class="doc-section">
+                <h3>Understanding the Round Robin Fix</h3>
+                <p>In previous versions, the algorithm used purely probabilistic modeling based on team skill ranking. This caused a bug where teams frequently rematched close-ranked opponents before playing other teams in the pool.</p>
+                <p>The new <strong>Strict Round Robin Mode</strong> alters the generator logic. When it sits at the pairing step, it checks historical pairings. If two teams have already played against each other, they are completely excluded from matching until no other valid unplayed alternative matchups remain. This guarantees a broad, non-repetitive distribution of opponents.</p>
+            </div>
+
+            <div class="doc-section">
+                <h3>Advanced Settings Decoded</h3>
+                <h4>Algorithm Tuning</h4>
+                <ul>
+                    <li><strong>Ranking Tolerance (k):</strong> Dictates the influence of team ranks. Ranks default directly to team numbers (Team 1 = Rank 1, Team 2 = Rank 2). A low value restricts matchmaking exclusively to close rank neighbors. A high value lets distant ranks match easily.</li>
+                    <li><strong>Consecutive Penalty:</strong> Governs player fatigue. If a team is active in Round 1, the system applies this divisor to their selection weight for Round 2, ensuring teams get a chance to sit out and rest when table capacity allows.</li>
+                </ul>
+
+                <h4>How the Multi-Tiered ETA Calculator Works</h4>
+                <p>Rather than using a crude estimate, the timeline is calculated using real tournament variables:</p>
+                <ul>
+                    <li><strong>Total Playtime:</strong> Computed as <em>Rounds generated × Matches Per Game × Match Duration</em>. For example, 3 matches of 2 minutes each equals 6 minutes of strict round play.</li>
+                    <li><strong>Scoring and Reset Time:</strong> Appends administrative minutes directly to every round block to account for writing scores down, resetting equipment, and rotating new teams to the tables.</li>
+                    <li><strong>Buffers & Meetings:</strong> A flat addition of minutes allocated for orientation meetings, organizer delays, and unexpected venue hiccups.</li>
+                    <li><strong>Random Delay Chance:</strong> Runs a probability simulation across every round generated. If a round triggers a delay, an extra 30 seconds is added to simulate live game overtimes or slow team swap-ins.</li>
+                </ul>
+            </div>
         </div>
     </div>
 
     <script>
         let generatedScheduleData = [];
+
+        // Tab Switcher Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
 
         function weightedRandom(items, weights) {
             let total = weights.reduce((a, b) => a + b, 0);
@@ -213,15 +375,20 @@
             const numTables = parseInt(document.getElementById('numTables').value);
             const kValue = parseFloat(document.getElementById('kValue').value);
             const penaltyValue = parseFloat(document.getElementById('penaltyValue').value);
+            const strictRR = document.getElementById('strictRoundRobin').checked;
 
             if (numTeams < 2 || numTables * 2 > numTeams) {
-                alert("Invalid configuration. Ensure you have at least 2 teams and enough teams for the tables.");
+                alert("Invalid configuration. Ensure you have at least 2 teams and enough teams to populate the tables.");
                 return;
+            }
+
+            if (gamesPerTeam >= numTeams && strictRR) {
+                alert("Warning: Games per team is equal to or greater than the number of teams. Strict Round Robin Mode will naturally allow rematches once all unique options are exhausted.");
             }
 
             const teams = Array.from({length: numTeams}, (_, i) => i + 1);
             const totalMatchesNeeded = Math.floor((numTeams * gamesPerTeam) / 2);
-            const maxRounds = Math.ceil(totalMatchesNeeded / numTables) * 2; 
+            const maxRounds = Math.ceil(totalMatchesNeeded / numTables) * 3; // Extended calculation space to prevent premature termination
             
             let teamMatchCounts = {};
             let pairMatchCounts = {};
@@ -241,45 +408,56 @@
                 for (let table = 1; table <= numTables; table++) {
                     if (availableTeams.size < 2) break;
 
-                    let feasiblePairs = [];
-                    let maxDiff = 1;
                     let selectedPair = null;
+                    let availableArray = Array.from(availableTeams);
 
-                    while (maxDiff <= 5 && !selectedPair) { 
-                        let tempPairs = [];
-                        let availableArray = Array.from(availableTeams);
+                    // Multi-pass system: Pass 1 enforces strict round robin if enabled. Pass 2 functions as fallback if locked.
+                    for (let pass = 1; pass <= 2; pass++) {
+                        if (selectedPair) break;
+                        
+                        let maxDiff = 1;
+                        while (maxDiff <= numTeams && !selectedPair) {
+                            let tempPairs = [];
 
-                        for (let i = 0; i < availableArray.length; i++) {
-                            for (let j = i + 1; j < availableArray.length; j++) {
-                                let t1 = availableArray[i], t2 = availableArray[j];
-                                if (Math.abs(t1 - t2) <= maxDiff) {
-                                    tempPairs.push([t1, t2]);
+                            for (let i = 0; i < availableArray.length; i++) {
+                                for (let j = i + 1; j < availableArray.length; j++) {
+                                    let t1 = availableArray[i], t2 = availableArray[j];
+                                    if (Math.abs(t1 - t2) <= maxDiff) {
+                                        let pairKey = getPairKey(t1, t2);
+                                        let pairHistory = pairMatchCounts[pairKey] || 0;
+                                        
+                                        // Pass 1 filters out duplicates strictly. Pass 2 ignores history filters to prevent deadlocks.
+                                        if (strictRR && pass === 1 && pairHistory > 0) {
+                                            continue; 
+                                        }
+                                        tempPairs.push([t1, t2]);
+                                    }
                                 }
                             }
+
+                            if (tempPairs.length > 0) {
+                                let weights = tempPairs.map(pair => {
+                                    let t1 = pair[0], t2 = pair[1];
+                                    let rankDiff = Math.abs(t1 - t2);
+                                    let baseProb = Math.exp(-rankDiff / kValue);
+                                    
+                                    let pairKey = getPairKey(t1, t2);
+                                    let pairHistory = pairMatchCounts[pairKey] || 0;
+                                    let pairPenalty = Math.exp(-pairHistory);
+
+                                    let consecPenalty = 1.0;
+                                    let lp1 = lastPlayed[t1];
+                                    let lp2 = lastPlayed[t2];
+                                    if (lp1.length && gameRound - lp1[lp1.length - 1] <= 1) consecPenalty /= penaltyValue;
+                                    if (lp2.length && gameRound - lp2[lp2.length - 1] <= 1) consecPenalty /= penaltyValue;
+
+                                    return baseProb * pairPenalty * consecPenalty;
+                                });
+
+                                selectedPair = weightedRandom(tempPairs, weights);
+                            }
+                            maxDiff++;
                         }
-
-                        if (tempPairs.length > 0) {
-                            let weights = tempPairs.map(pair => {
-                                let t1 = pair[0], t2 = pair[1];
-                                let rankDiff = Math.abs(t1 - t2);
-                                let baseProb = Math.exp(-rankDiff / kValue);
-                                
-                                let pairKey = getPairKey(t1, t2);
-                                let pairHistory = pairMatchCounts[pairKey] || 0;
-                                let pairPenalty = Math.exp(-pairHistory);
-
-                                let consecPenalty = 1.0;
-                                let lp1 = lastPlayed[t1];
-                                let lp2 = lastPlayed[t2];
-                                if (lp1.length && gameRound - lp1[lp1.length - 1] <= 1) consecPenalty /= penaltyValue;
-                                if (lp2.length && gameRound - lp2[lp2.length - 1] <= 1) consecPenalty /= penaltyValue;
-
-                                return baseProb * pairPenalty * consecPenalty;
-                            });
-
-                            selectedPair = weightedRandom(tempPairs, weights);
-                        }
-                        maxDiff++;
                     }
 
                     if (selectedPair) {
@@ -315,26 +493,31 @@
             
             const totalRounds = schedule.length;
             
-            // Precise Time Metrics
-            const gameplayMinsPerRound = 3 * 2; // 3 matches * 2 minutes = 6 minutes
-            const scoringAndResetMinsPerRound = 2; // 2 minutes to score/reset
-            const baseMinsPerRound = gameplayMinsPerRound + scoringAndResetMinsPerRound; // 8 minutes total per round
+            // Custom Inputs parameters gathering
+            const matchesPerGame = parseInt(document.getElementById('matchesPerGame').value) || 3;
+            const matchDuration = parseInt(document.getElementById('matchDuration').value) || 2;
+            const resetTime = parseInt(document.getElementById('resetTime').value) || 2;
+            const fixedExtra = parseInt(document.getElementById('fixedExtra').value) || 5;
+            const hiccupTime = parseInt(document.getElementById('hiccupTime').value) || 5;
+            const delayChance = (parseInt(document.getElementById('delayChance').value) || 30) / 100;
+
+            // Advanced Precise Time Calculations
+            const gameplayMinsPerRound = matchesPerGame * matchDuration; 
+            const baseMinsPerRound = gameplayMinsPerRound + resetTime; 
             
             const totalBaseRoundMinutes = totalRounds * baseMinsPerRound;
-            const extraTimeFixed = 5;
-            const meetingsAndHiccupsFixed = 5;
             
-            // Calculate random 30-second delays across a few rounds (approx 30% chance per round)
+            // Generate variable 30-second delay anomalies
             let randomDelaysMinutes = 0;
             let delayedRoundsCount = 0;
             for (let i = 0; i < totalRounds; i++) {
-                if (Math.random() < 0.3) { 
-                    randomDelaysMinutes += 0.5; // 30 seconds expressed as 0.5 minutes
+                if (Math.random() < delayChance) { 
+                    randomDelaysMinutes += 0.5; 
                     delayedRoundsCount++;
                 }
             }
             
-            const exactTotalMinutes = totalBaseRoundMinutes + extraTimeFixed + meetingsAndHiccupsFixed + randomDelaysMinutes;
+            const exactTotalMinutes = totalBaseRoundMinutes + fixedExtra + hiccupTime + randomDelaysMinutes;
             const etaHours = Math.floor(exactTotalMinutes / 60);
             const remainingMins = Math.round(exactTotalMinutes % 60);
             
@@ -344,15 +527,15 @@
 
             document.getElementById('etaContainer').innerHTML = `
                 <div class="eta-container">
-                    <div class="eta-title">Tournament Time/Length Estimate: ${timeDisplayString}</div>
+                    <div class="eta-title">Accurate Tournament Estimate: ${timeDisplayString}</div>
                     <div class="eta-breakdown">
                         <strong>Live Calculation Breakdown:</strong><br>
                         • Total Rounds Generated: ${totalRounds}<br>
-                        • Total Game Playtime: ${totalRounds * gameplayMinsPerRound} minutes (${totalRounds} rounds × 3 matches × 2 mins)<br>
-                        • Total Scoring and Reset Time: ${totalRounds * scoringAndResetMinsPerRound} minutes (${totalRounds} rounds × 2 mins)<br>
-                        • Global Extra Time Allocation: +${extraTimeFixed} minutes<br>
-                        • Small Meetings & Hiccups Buffer: +${meetingsAndHiccupsFixed} minutes<br>
-                        • Random Delays Applied: +${randomDelaysMinutes} minutes (${delayedRoundsCount} rounds caught a 30-second delay)
+                        • Total Game Playtime: ${totalRounds * gameplayMinsPerRound} minutes (${totalRounds} rounds × ${matchesPerGame} matches × ${matchDuration} mins)<br>
+                        • Total Scoring and Reset Time: ${totalRounds * resetTime} minutes (${totalRounds} rounds × ${resetTime} mins)<br>
+                        • Global Extra Time Allocation: +${fixedExtra} minutes<br>
+                        • Small Meetings & Hiccups Buffer: +${hiccupTime} minutes<br>
+                        • Random Delays Applied: +${randomDelaysMinutes} minutes (${delayedRoundsCount} rounds caught a 30-second delay based on a ${delayChance * 100}% variance config)
                     </div>
                 </div>
             `;
